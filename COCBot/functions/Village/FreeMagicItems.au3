@@ -15,10 +15,9 @@
 Local $g_iMidPointX = round($g_iGAME_WIDTH / 2)
 Local $g_iMidPointY = round($g_iGAME_HEIGHT / 2)
 Local $CocDiamondTL = 0  & "," & 0 & "|" & $g_iMidPointX & "," & 0 & "|" & $g_iMidPointX & "," & $g_iMidPointY & "|" & 0 & "," & $g_iMidPointY
-
 Local $aCloseTraderBtn[4] = [798, 97 + $g_iMidOffsetY, 0xF38F8D, 10]
 
-Func CollectFreeMagicItems($bTest = False)
+Func CollectFreeMagicItems($bTest = False, $sBuyItem = "")
 	If Not $g_bChkCollectFreeMagicItems Then Return
 	Local Static $iLastTimeChecked[8] = [0, 0, 0, 0, 0, 0, 0, 0]
 
@@ -28,7 +27,10 @@ Func CollectFreeMagicItems($bTest = False)
 	If $iLastTimeChecked[$g_iCurAccount] = @MDAY And Not $bTest Then Return
 
 	If OpenTraderPage() Then
-		_CollectFreeMagicItems($bTest)
+		If $sBuyItem <> "" Then _CollectFreeMagicItems($bTest, $sBuyItem)
+
+		; collect free item
+		If ClickSideBar() Then _CollectFreeMagicItems($bTest, "")
 
 		If _Sleep(1000) Then Return
 		CloseTraderPage()
@@ -37,14 +39,11 @@ Func CollectFreeMagicItems($bTest = False)
 	EndIf
 EndFunc   ;==>DailyChallenges
 
-Func OpenTraderPage($bSwitch = 0)
+Func OpenTraderPage()
 	; Check Trader Icon on Main Village
 	Local $sImgTraderImage = @ScriptDir & "\imgxml\FreeMagicItems\TraderIcon\Trader*"
-	Local $sImgGreenGemsBtn = @ScriptDir & "\imgxml\FreeMagicItems\SideButtons\GreenGemsButton*"
-	Local $sImgGreyGemsBtn = @ScriptDir & "\imgxml\FreeMagicItems\SideButtons\GreyGemsButton*"
-    Local $sTraderArea = $CocDiamondTL
-	Local $sSearchArea = GetDiamondFromRect2(50,160,110,300)
-	Local $aiTrader, $aiGreenGemsBtn, $aiGreyGemsBtn, $iExit = 0, $bExit = False, $bRet = False
+	Local $sTraderArea = $CocDiamondTL ;GetDiamondFromRect("75,110,185,185")
+	Local $aiTrader, $iExit = 0, $bExit = False, $bRet = False
 
 	If Not IsMainPage() Then Return
 	If _Sleep($DELAYCOLLECT2) Then Return
@@ -70,24 +69,8 @@ Func OpenTraderPage($bSwitch = 0)
 		While $iExit < 30 And $bExit = False
 			; check Trader is opened
 			If _CheckPixel($aCloseTraderBtn, True) Then
-				Switch $bSwitch
-					Case 0
-					; search for green GEM side bar
-					$aiGreenGemsBtn = decodeSingleCoord(findImage("OpenTraderPage", $sImgGreenGemsBtn, $sSearchArea, 1, True, Default))
-					If IsArray($aiGreenGemsBtn) And Ubound($aiGreenGemsBtn, 1) = 2 Then
-						SetLog("Gem Tab available", $COLOR_SUCCESS)
-						$bExit = True
-						$bRet = True
-					Else ; search for grey GEM side bar
-						$aiGreyGemsBtn = decodeSingleCoord(findImage("OpenTraderPage", $sImgGreyGemsBtn, $sSearchArea, 1, True, Default))
-						If IsArray($aiGreyGemsBtn) And Ubound($aiGreyGemsBtn, 1) = 2 Then PureClickP($aiGreyGemsBtn)
-					EndIf
-
-					Case Else
-						$bExit = True
-						$bRet = True
-				EndSwitch
-
+				$bExit = True
+				$bRet = True
 			EndIf
 
 			If Not $g_bRunState Then Return
@@ -99,24 +82,80 @@ Func OpenTraderPage($bSwitch = 0)
 
 	If $iExit > 29 Then
 		SetLog("OpenTraderPage failed", $COLOR_ACTION)
-		SaveDebugDiamondImage("OpenTraderPage", $sSearchArea)
+		SaveDebugDiamondImage("OpenTraderPage", $sTraderArea)
 	EndIf
 
 	Return $bRet
 EndFunc
 
-Func _CollectFreeMagicItems($bTest = False)
-	SetLog("Collecting Free Magic Items", $COLOR_INFO)
+Func ClickSideBar($bSwitch = 0, $bDebugImageSave = $g_bDebugImageSave)
+	SetLog("ClickSideBar")
+	Local $sImgGreenGemsBtn = @ScriptDir & "\imgxml\FreeMagicItems\SideButtons\GreenGemsButton*"
+	Local $sImgGreyGemsBtn = @ScriptDir & "\imgxml\FreeMagicItems\SideButtons\GreyGemsButton*"
+	Local $sSearchArea = GetDiamondFromRect2(50, 173 + $g_iMidOffsetY, 110, 313 + $g_iMidOffsetY)
+	Local $aiGreenGemsBtn, $aiGreyGemsBtn, $iExit = 0, $bExit = False, $bRet = False
+
+	; check Trader is opened
+	If _CheckPixel($aCloseTraderBtn, True) Then
+		If $bDebugImageSave Then SaveDebugDiamondImage("ClickSideBar", $sSearchArea)
+		While $iExit < 30 And $bExit = False
+			Switch $bSwitch
+				Case 0
+				; search for green GEM side bar
+				$aiGreenGemsBtn = decodeSingleCoord(findImage("OpenTraderPage", $sImgGreenGemsBtn, $sSearchArea, 1, True, Default))
+				If IsArray($aiGreenGemsBtn) And Ubound($aiGreenGemsBtn, 1) = 2 Then
+					SetLog("Gem Tab available", $COLOR_SUCCESS)
+					$bExit = True
+					$bRet = True
+				Else ; search for grey GEM side bar
+					$aiGreyGemsBtn = decodeSingleCoord(findImage("OpenTraderPage", $sImgGreyGemsBtn, $sSearchArea, 1, True, Default))
+					If IsArray($aiGreyGemsBtn) And Ubound($aiGreyGemsBtn, 1) = 2 Then PureClickP($aiGreyGemsBtn)
+				EndIf
+
+				Case Else
+					SetLog("SideBar not found")
+			EndSwitch
+
+			If Not $g_bRunState Then Return
+			$iExit += 1
+			If _Sleep(200) Then Return
+		WEnd
+	EndIf
+
+	If $iExit > 29 Then
+		SetLog("ClickSideBar failed", $COLOR_ACTION)
+		SaveDebugDiamondImage("ClickSideBar", $sSearchArea)
+	EndIf
+
+	If _Sleep(1000) Then Return
+
+	Return $bRet
+EndFunc
+
+Func _CollectFreeMagicItems($bTest = False, $sBuyItem = "", $bDebugImageSave = $g_bDebugImageSave)
 	Local $aResults[3] = ["", "", ""]
 	Local $aSoldOut[4] = [236, 257 + $g_iMidOffsetY, 0xAF5E0D, 10]
 	Local $aiDebugXY[2], $iSlotX, $iSlotY = 325 + $g_iMidOffsetY
+	Local $sItem = "FREE"
+	Local $aCoin[4] = [486, 400 + $g_iMidOffsetY, 0XFDD00E, 10]
+
+	If $sBuyItem <> "" Then
+		SetLog("Buying Magic Item", $COLOR_INFO)
+		$sItem = $sBuyItem
+	Else
+		SetLog("Collecting Free Magic Item", $COLOR_INFO)
+	EndIf
 
 	For $i = 0 To 2
 		$iSlotX = 224 + $i * 204
 		$aResults[$i] = getOcrAndCapture("coc-freemagicitems", 54 + $iSlotX, $iSlotY, 80, 25, True)
+		;$aResults[$i] = getOcrAndCapture("coc-freemagicitems", $aOcrPositions[$i][0], $aOcrPositions[$i][1], 80, 25, True)
+		;$aResults[$i] = getOcrAndCapture("coc-freemagicitems", $aOcrPositions[$i][0], $aOcrPositions[$i][1], 80, 30, True) ;CLASHIVERSARY title
+		; 5D79C5 ; >Blue Background price
+		; 0D997C ; >Xmas
 
 		If $aResults[$i] <> "" Then
-			If $aResults[$i] = "FREE" Then
+			If $aResults[$i] = $sItem Then
 				If _CheckPixel($aSoldOut, True, Default, "CollectFreeMagicItems") Then
 					SetLog("Sold Out!", $COLOR_INFO)
 					$aResults[$i] = "Sold Out"
@@ -127,13 +166,29 @@ Func _CollectFreeMagicItems($bTest = False)
 						SetLog("Storage full", $COLOR_ACTION)
 						$aResults[$i] = "Storage full"
 					Else
-						If Not $bTest Then Click(54 + $iSlotX, $iSlotY, 2, 500)
+						If Not $bTest Then
+							Click(54 + $iSlotX, $iSlotY, 2, 500)
+							If $sBuyItem <> "" Then
+								If _Sleep(2000) Then Return
+								If _CheckPixel($aCoin, True) Then PureClickP($aCoin)
+							EndIf
+						EndIf
 					EndIf
-					SetLog("Free Magic Item detected", $COLOR_INFO)
+					SetLog($sItem & " Item detected", $COLOR_INFO)
+				EndIf
+				If $bDebugImageSave Then
+					$aiDebugXY[0] = 54 + $iSlotX
+					$aiDebugXY[1] = $iSlotY
+					SaveDebugPointImage("_CollectFreeMagicItems", $aiDebugXY)
 				EndIf
 				If _Sleep(500) Then Return
 			Else
 				If _ColorCheck(_GetPixelColor(139 + $iSlotX, 12 + $iSlotY, True), Hex(0xE5FD8E, 6), 10) Then $aResults[$i] = $aResults[$i] & " Gems"
+				If $bDebugImageSave Then
+					$aiDebugXY[0] = 139 + $iSlotX
+					$aiDebugXY[1] = 12 + $iSlotY
+					SaveDebugPointImage("_CollectFreeMagicItems", $aiDebugXY)
+				EndIf
 			EndIf
 		Else
 			If $aResults[$i] = "" Then $aResults[$i] = "N/A"
@@ -163,6 +218,8 @@ Func CloseTraderPage()
 		$iExit += 1
 	WEnd
 EndFunc   ;==>CloseTraderPage
+
+
 
 Local $aEventChallengeCloseBtn[4] = [804, 76 + $g_iMidOffsetY, 0xFF8587, 10]
 
@@ -251,41 +308,56 @@ Func CollectEventRewards($bTest = False)
 	Local $sImgEventClaimButton = @ScriptDir & "\imgxml\EventChallenges\EventClaimButton*"
 	Local $sImgEventProgressCurrent = @ScriptDir & "\imgxml\EventChallenges\EventProgressCurrent*"
 	Local $sImgEventProgressStart = @ScriptDir & "\imgxml\EventChallenges\EventProgressStart*"
+	Local $sImgEventClaimBonusButton = @ScriptDir & "\imgxml\EventChallenges\EventClaimBonusButton*"
 	Local $sClaimButtonArea = GetDiamondFromRect2(32, 524 + $g_iMidOffsetY, 834, 572 + $g_iMidOffsetY)
-	Local $sProgressArea = GetDiamondFromRect2(32, 356 + $g_iMidOffsetY, 834, 416 + $g_iMidOffsetY)
-	Local $avClaimButtons, $aiClaimButtons, $aiProgressCurrentButton, $aiProgressStartButton, $bProgressEnd = False, $bExit = False, $iExit = 0
+	Local $sProgressAreaLeft = GetDiamondFromRect2(755, 356 + $g_iMidOffsetY, 834, 416 + $g_iMidOffsetY)
+	Local $sProgressAreaRight = GetDiamondFromRect2(32, 356 + $g_iMidOffsetY, 110, 416 + $g_iMidOffsetY)
+	Local $sProgressAreaMid = GetDiamondFromRect2(410, 356 + $g_iMidOffsetY, 525, 416 + $g_iMidOffsetY)
+	Local $avClaimButtons, $aiClaimButton, $aiProgressCurrentButton, $aiProgressStartButton, $bProgressEnd = False, $bExit = False, $iExit = 0
 
 	While $iExit < 30 And $bExit = False
+		SetLog("Collecting Event Rewards..." & $iExit)
+
 		$avClaimButtons = decodeMultipleCoords(findImage("CollectEventRewards", $sImgEventClaimButton, $sClaimButtonArea, 4, True), Default, Default, 0)
 		If IsArray($avClaimButtons) Then
-			For $aiClaimButtons In $avClaimButtons
-				SetLog("Found Claim Button at : " & $aiClaimButtons[0] & "," & $aiClaimButtons[1], $COLOR_INFO)
-				If Not $bTest Then PureClickP($aiClaimButtons)
+			For $aiClaimButton In $avClaimButtons
+				SetLog("Found Claim Button at : " & $aiClaimButton[0] & "," & $aiClaimButton[1], $COLOR_INFO)
+				If Not $bTest Then PureClickP($aiClaimButton)
 				If _Sleep(2000) Then Return False
 			Next
 		Else
 			SetLog("Failed to locate Claim Button", $COLOR_INFO)
 		EndIf
 
-		; search for progress button first
-		$aiProgressCurrentButton = decodeSingleCoord(findImage("OpenEventChallenges", $sImgEventProgressCurrent, $sProgressArea, 1, True))
-		If IsArray($aiProgressCurrentButton) And UBound($aiProgressCurrentButton) = 2 And $bProgressEnd = False Then
-			SetLog("Progress Current Image available", $COLOR_SUCCESS)
-			ClickDrag(740, 340 + $g_iMidOffsetY, 120, 340 + $g_iMidOffsetY)
-			If _Sleep(1500) Then Return
+		; search for bonus track claim button
+		$aiClaimButton = decodeSingleCoord(findImage("OpenEventChallenges", $sImgEventClaimBonusButton, $sProgressAreaMid, 1, True))
+		If IsArray($aiClaimButton) And UBound($aiClaimButton) = 2 Then
+			SetLog("Bonus Track Claim button available", $COLOR_SUCCESS)
+			If Not $bTest Then PureClickP($aiClaimButton)
+			;$bExit = True
 		Else
-			$bProgressEnd = True
-			$aiProgressStartButton = decodeSingleCoord(findImage("OpenEventChallenges", $sImgEventProgressStart, $sProgressArea, 1, True))
-			If IsArray($aiProgressStartButton) And UBound($aiProgressStartButton) = 2 Then
-				SetLog("Progress Start Image available", $COLOR_SUCCESS)
-				ClickDrag(120, 340 + $g_iMidOffsetY, 740, 340 + $g_iMidOffsetY)
+			; search for progress button first
+			$aiProgressCurrentButton = decodeSingleCoord(findImage("OpenEventChallenges", $sImgEventProgressCurrent, $sProgressAreaLeft, 1, True))
+			If IsArray($aiProgressCurrentButton) And UBound($aiProgressCurrentButton) = 2 And $bProgressEnd = False Then
+				SetLog("Progress Current Image available", $COLOR_SUCCESS)
+				ClickDrag(740, 340 + $g_iMidOffsetY, 120, 340 + $g_iMidOffsetY)
 				If _Sleep(1500) Then Return
 			Else
-				$bExit = True
+				$bProgressEnd = True
+				$aiProgressStartButton = decodeSingleCoord(findImage("OpenEventChallenges", $sImgEventProgressStart, $sProgressAreaRight, 1, True))
+				If IsArray($aiProgressStartButton) And UBound($aiProgressStartButton) = 2 Then
+					SetLog("Progress Start Image available", $COLOR_SUCCESS)
+					ClickDrag(120, 340 + $g_iMidOffsetY, 740, 340 + $g_iMidOffsetY)
+					If _Sleep(1500) Then Return
+				Else
+					$bExit = True
+				EndIf
 			EndIf
 		EndIf
 
 		$iExit += 1
+
+		If _Sleep(1000) Then Return
 	WEnd
 
 	If _Sleep(1000) Then Return
@@ -309,4 +381,4 @@ Func CloseEventChallenges()
 		If _Sleep($DELAYRUNBOT6) Then Return
 		$iExit += 1
 	WEnd
- EndFunc   ;==>CloseEventChallenges
+EndFunc   ;==>CloseEventChallenges

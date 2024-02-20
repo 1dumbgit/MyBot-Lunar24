@@ -1258,7 +1258,7 @@ Func __RunFunction($action)
 			If _Sleep($DELAYRUNBOT3) Then Return
 
 		Case "CollectFreeMagicItems"
-			CollectFreeMagicItems()
+			CollectFreeMagicItems(0,"3100")
 			If _Sleep($DELAYRUNBOT3) Then Return
 
 			EventChallenges()
